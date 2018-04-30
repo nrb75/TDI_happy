@@ -11,7 +11,7 @@ knitr::opts_chunk$set(fig.width=5, fig.height=5, echo=FALSE, warning=FALSE, mess
 
 ```{r setup, include=FALSE, echo=FALSE}
 
-setwd("C:/Users/nrb75/Box Sync/Job Hunt/2018 Data Sci/The Data Incubator/plaques")
+#setwd("C:/Users/nrb75/Box Sync/Job Hunt/2018 Data Sci/The Data Incubator/plaques")
 
 install.packages('knitr', repos = c('http://rforge.net', 'http://cran.rstudio.org'),
              type = 'source')
