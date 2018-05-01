@@ -2,6 +2,7 @@
 title: "Figure1_Plaques"
 author: "Natalie Morse"
 date: "April 30, 2018"
+output: github_document
 ---
 
 ```{r, echo=FALSE}
@@ -40,7 +41,7 @@ data.plaque2=data.plaque[1:200,]
 data.plaque[,c(4,23)]=lapply(data.plaque[,c(4,23)], as.character)
 
 data.usuk=subset(data.plaque, country %in% c("United Kingdom", "United States"))
-#nrow(data.usuk)/nrow(data.plaque)#percent of plaques in us or UK
+nrow(data.usuk)/nrow(data.plaque)#percent of plaques in us or UK
 ```
 
 
