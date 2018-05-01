@@ -82,7 +82,6 @@ factorial(18)#how many unique paths
 ```
 
 
-
 ###optimize path with Genetic Algorithm
 ```{r}
 coords.df <- beatles.points[,c("longitude", "latitude")]
@@ -106,8 +105,7 @@ tourLength <- function(tour, distMatrix) {
 tpsFitness <- function(tour, ...) 1/tourLength(tour, ...)
 
 # run a GA algorithm
-GA.fit <- ga(type = "permutation", fitness = tpsFitness, distMatrix = D, min = 1, 
-    max = attr(dist.mx, "Size"), popSize = 10, maxiter = 500, run = 100, pmutation = 0.2, 
+GA.fit <- ga(type = "permutation", fitness = tpsFitness, distMatrix = D, min = 1,     max = attr(dist.mx, "Size"), popSize = 10, maxiter = 500, run = 100, pmutation = 0.2, 
     monitor = NULL)
 
 
