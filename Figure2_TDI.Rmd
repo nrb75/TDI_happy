@@ -1,0 +1,201 @@
+---
+title: "Figure 2"
+author: "Natalie Morse"
+date: "April 30, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r, echo=FALSE,echo=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=5, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE, error=TRUE)
+```
+
+
+```{r setup, include=FALSE}
+setwd("C:/Users/nrb75/Box Sync/Job Hunt/2018 Data Sci/The Data Incubator/plaques")
+
+library(scales)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(jsonlite)
+library(httr)
+library(gutenbergr)
+library(sciplot)
+library(tidyr)
+library(tidytext)
+library(knitr)
+library(maptools)
+library(devtools)
+library(Rcpp)
+library(TSP)
+library(GA)
+library(tspmeta)
+
+```
+
+```{r}
+install_github("dkahle/ggmap")
+library(ggmap)
+library(dplyr)
+#load data
+data.plaque=read.csv("open-plaques-all-2018-04-08.csv")
+colnames(data.plaque)[1]="id"
+data.plaque2=data.plaque[1:200,]
+data.plaque[,c(4,23)]=lapply(data.plaque[,c(4,23)], as.character)
+
+data.usuk=subset(data.plaque, country %in% c("United Kingdom", "United States"))
+```
+
+
+```{r}
+#Tokenise text variables for analysis
+text.inscription=data_frame(inscription=data.usuk$inscription, id=data.usuk$id)
+text.name=data_frame(name=data.usuk$lead_subject_name, id=data.usuk$id)
+
+#Use unnest_tokens to make each row 1 word (it keeps the ECR # as ID to link them).
+#Also remove stop words (the, of, etc.)
+data("stop_words")
+text.inscription=text.inscription%>%
+  unnest_tokens(word, inscription)%>%
+  anti_join(stop_words) #word is the new column that will have 1 word per entry, problem is the original data column it is pulling from
+```
+
+
+```{r}
+#Find most common word within plaque inscription within the US or UK
+id.us=data.usuk$id[data.usuk$country=="United States"]
+id.uk=data.usuk$id[data.usuk$country=="United Kingdom"]
+text.insc.us=subset(text.inscription, id %in% id.us)
+text.insc.uk=subset(text.inscription, id %in% id.uk)
+
+text.inscription=merge(text.inscription, data.plaque[,c("id", "country")], by="id")
+
+sum.ins=text.inscription%>%
+  group_by(country)%>%
+  count(word, sort=TRUE)%>%
+    mutate(., percent=n/length(unique(data.plaque$id))*100)%>%
+  top_n(n=10)
+```
+
+
+
+```{r}
+#how many plaques dedicatd to john lennon?
+text.ins.lennon=subset(text.inscription, word=='lennon'& country=="United Kingdom"|word=='Lennon' & country=="United Kingdom")
+data.usuk=mutate(data.usuk, lennon=ifelse(id %in% text.ins.lennon$id, 'Lennon', 'None'))
+
+#length(unique(text.ins.lennon$id))
+```
+
+Beatles plaques
+
+```{r}
+text.ins.beatles=subset(text.inscription, word=='beatles'& country=="United Kingdom"|word=='Beatles' & country=="United Kingdom")
+length(unique(text.ins.beatles$id)) #21 unique places
+data.usuk=mutate(data.usuk, beatles=ifelse(id %in% text.ins.beatles$id, 'Beatles', 'None'))
+```
+
+
+```{r}
+map <- get_map(location = 'england', zoom = 7)
+mapPoints <- ggmap(map) +geom_point(aes(x = longitude, y =latitude, color=beatles), data =data.usuk, alpha = .5)+geom_point(aes(x =longitude, y =latitude, color=beatles), data =subset(data.usuk, beatles=='Beatles'), alpha = .5, size=2)+scale_color_manual(values=c('red', "gray42"), name="", labels=c("Beatles sites", "Other sites"))+theme(legend.key = element_blank())+xlab("Longitude")+ylab("Latitude")+ggtitle("Beatles Sites to Visit")
+mapPoints
+```
+
+
+#optimize path
+```{r}
+#https://operatiology.wordpress.com/2014/05/15/traveling-salesman-problem-in-r/
+  
+lennon.points=subset(data.usuk, lennon=="Lennon")
+lennon.points=lennon.points[complete.cases(lennon.points[,c("longitude", "latitude")]),]
+
+beatles.points=subset(data.usuk, beatles=="Beatles")
+beatles.points=beatles.points[complete.cases(beatles.points[,c("longitude", "latitude")]),]
+
+coords.df <- beatles.points[,c("longitude", "latitude")]
+coords.mx <- as.matrix(coords.df)
+ 
+# Compute distance matrix
+dist.mx <- dist(coords.mx)
+ 
+# Construct a TSP object
+tsp.ins <- tsp_instance(coords.mx, dist.mx)
+tour1 <- run_solver(tsp.ins, method="2-opt")
+
+#Plot
+autoplot(tsp.ins, tour1)
+#too hard to visualize, let
+
+#data("eurodist", package = "datasets")
+```
+
+john lennon tour length = 6.79
+beatles tour lenght = 19.88
+
+GA
+
+```{r}
+D=as.matrix(dist.mx)
+
+# given a tour, calculate the total distance
+tourLength <- function(tour, distMatrix) {
+    tour <- c(tour, tour[1])
+    route <- embed(tour, 2)[, 2:1]
+    distMatrixroute=distMatrix[route]
+    sum(distMatrix[route])
+}
+# inverse of thetotal distance is the fitness
+tpsFitness <- function(tour, ...) 1/tourLength(tour, ...)
+
+# run a GA algorithm
+GA.fit <- ga(type = "permutation", fitness = tpsFitness, distMatrix = D, min = 1, 
+    max = attr(dist.mx, "Size"), popSize = 10, maxiter = 500, run = 100, pmutation = 0.2, 
+    monitor = NULL)
+
+
+#Visualization 
+
+mds <- cmdscale(dist.mx)
+x <- mds[, 1] #the scaled x coordinate, takes the distance matrix and returns a set of points such that the distances between points are approx equal to dissimilarities
+y <- -mds[, 2]
+plot(x, y, type = "n", asp = 1, xlab = "", ylab = "")
+abline(h = pretty(range(x), 10), v = pretty(range(y), 10),
+           col = "light gray")
+tour <- GA.fit@solution[1, ]
+tour <- c(tour, tour[1])
+n <- length(tour)
+
+arrows(x[tour[-n]], y[tour[-n]], x[tour[-1]], y[tour[-1]],
+           length = 0.15, angle = 25, col = "steelblue", lwd = 2)
+text(x, y, labels(dist.mx), cex=0.8)
+
+#regular coordinates
+x1=coords.mx[,1]
+y1=coords.mx[,2]
+
+plot(x1, y1, type = "n", asp = 1, xlab = "", ylab = "")
+abline(h = pretty(range(x), 10), v = pretty(range(y), 10),
+           col = "light gray")
+arrows(x1[tour[-n]], y1[tour[-n]], x1[tour[-1]], y1[tour[-1]],
+           length = 0.15, angle = 25, col = "steelblue", lwd = 2)
+text(x1, y1, cex=0.8)
+
+tourLength(tour,D)
+```
+
+
+
+```{r}
+#TEST google maps api
+library(gmapsdistance)
+set.api.key="AIzaSyBucJpiy3AuSdNW98jjHv_VPJ6OTr8lr94"
+
+origin=c("57.7+-4.4")
+destination = c("53.34+-2.7")
+results1 = gmapsdistance(origin, destination, mode = "driving")
+```
+
+
