@@ -2,11 +2,10 @@
 title: "Figure1_Plaques"
 author: "Natalie Morse"
 date: "April 30, 2018"
-output: html_document
 ---
 
 ```{r, echo=FALSE}
-knitr::opts_chunk$set(fig.width=5, fig.height=5, echo=FALSE, warning=FALSE, message=FALSE, tidy=TRUE, error=TRUE)
+knitr::opts_chunk$set(fig.width=5, fig.height=5, warning=FALSE, message=FALSE, tidy=TRUE, error=TRUE)
 ```
 
 ```{r setup, include=FALSE, echo=FALSE}
