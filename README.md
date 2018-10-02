@@ -1,2 +1,2 @@
-# TDI_happy
-TDI_happy
+The Data Incubator prep
+Proposed project to investigate what makes people happy
